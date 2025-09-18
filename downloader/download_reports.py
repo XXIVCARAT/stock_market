@@ -12,7 +12,7 @@ from selenium.common.exceptions import TimeoutException, ElementClickIntercepted
 
 
 # ----------------- Logging Setup -----------------
-def setup_logging(log_file="annual_reports.log"):
+def setup_logging(log_file):
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
@@ -117,13 +117,22 @@ class AnnualReportDownloader:
 
 # ----------------- Runner -----------------
 if __name__ == "__main__":
-    setup_logging()
-
+    
     with open("downloader/config/downloader.yaml", "r") as f:
         config = yaml.safe_load(f)
-
+    
     csv_file = config["path"]["csv"]
     download_path = config["path"]["downloads"]
+    log_path = config["path"]["logs"]
+
+    # --- FIX STARTS HERE ---
+    # Get the directory part of the log file path
+    log_dir = os.path.dirname(log_path)
+    # Create the log directory if it doesn't already exist
+    os.makedirs(log_dir, exist_ok=True)
+    # --- FIX ENDS HERE ---
+
+    setup_logging(log_path)
 
     tickers = pd.read_csv(csv_file)["ticker"].dropna().unique().tolist()
 
