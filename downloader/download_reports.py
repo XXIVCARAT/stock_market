@@ -119,7 +119,7 @@ class AnnualReportDownloader:
 if __name__ == "__main__":
     setup_logging()
 
-    with open("config/downloader.yaml", "r") as f:
+    with open("downloader/config/downloader.yaml", "r") as f:
         config = yaml.safe_load(f)
 
     csv_file = config["path"]["csv"]
