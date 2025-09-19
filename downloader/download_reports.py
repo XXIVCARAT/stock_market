@@ -10,11 +10,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, ElementClickInterceptedException
 
-# --- MODIFICATION STARTS HERE ---
-import zipfile
-import shutil
-# --- MODIFICATION ENDS HERE ---
-
 
 # ----------------- Logging Setup -----------------
 def setup_logging(log_file):
@@ -53,17 +48,10 @@ def create_driver(download_dir: str) -> webdriver.Chrome:
 
 # ----------------- Downloader Class -----------------
 class AnnualReportDownloader:
-    # --- MODIFICATION: Updated constructor to accept unzipped path ---
-    def __init__(self, symbol: str, base_download_dir: str, base_unzip_dir: str):
+    def __init__(self, symbol: str, base_download_dir: str):
         self.symbol = symbol
         self.download_dir = os.path.join(os.path.abspath(base_download_dir), f"{symbol}/downloads")
-        # --- MODIFICATION: Define the unzip directory ---
-        self.unzip_dir = os.path.join(os.path.abspath(base_unzip_dir), self.symbol)
-        
         os.makedirs(self.download_dir, exist_ok=True)
-        # --- MODIFICATION: Create the unzip directory ---
-        os.makedirs(self.unzip_dir, exist_ok=True)
-        
         self.driver = create_driver(self.download_dir)
         self.wait = WebDriverWait(self.driver, 20)
 
@@ -110,58 +98,12 @@ class AnnualReportDownloader:
 
             logging.info(f"Triggering download for {year_text} -> {file_name}")
             try:
-                # Use JS click for reliability
                 self.driver.execute_script("arguments[0].click();", link)
-                # Wait for download to start and potentially complete
-                time.sleep(10) 
+                time.sleep(5)  # allow download to start
             except Exception as e:
                 logging.error(f"Failed to click {year_text}: {e}")
 
-        logging.info(f"Report downloads triggered. Waiting a bit more for them to complete...")
-        time.sleep(15) # Extra wait for larger files to finish downloading
-        logging.info(f"Downloads for {self.symbol} finished. Original files are in {self.download_dir}")
-
-    # --- MODIFICATION STARTS HERE: New method to unzip and organize files ---
-    def _unzip_and_organize_reports(self):
-        """
-        Unzips .zip files and copies other files from the download directory
-        to the unzipped directory, leaving the original downloads intact.
-        """
-        logging.info(f"Organizing and unzipping files for {self.symbol} into: {self.unzip_dir}")
-        
-        try:
-            downloaded_files = os.listdir(self.download_dir)
-            if not downloaded_files:
-                logging.warning(f"No files found in download directory for {self.symbol} to organize.")
-                return
-
-            for filename in downloaded_files:
-                source_path = os.path.join(self.download_dir, filename)
-                
-                # If the item is a file
-                if os.path.isfile(source_path):
-                    # If it's a zip file, extract its contents
-                    if filename.lower().endswith('.zip'):
-                        try:
-                            with zipfile.ZipFile(source_path, 'r') as zip_ref:
-                                zip_ref.extractall(self.unzip_dir)
-                            logging.info(f"Successfully unzipped '{filename}'")
-                        except zipfile.BadZipFile:
-                            logging.error(f"Error: '{filename}' is not a valid zip file or is corrupted.")
-                        except Exception as e:
-                            logging.error(f"Failed to unzip '{filename}': {e}")
-                    # Otherwise, just copy the file
-                    else:
-                        try:
-                            destination_path = os.path.join(self.unzip_dir, filename)
-                            shutil.copy2(source_path, destination_path) # copy2 preserves metadata
-                            logging.info(f"Copied '{filename}'")
-                        except Exception as e:
-                            logging.error(f"Failed to copy '{filename}': {e}")
-
-        except Exception as e:
-            logging.error(f"An error occurred during file organization for {self.symbol}: {e}")
-    # --- MODIFICATION ENDS HERE ---
+        logging.info(f"Reports downloaded to {self.download_dir}")
 
     def run(self):
         try:
@@ -169,8 +111,6 @@ class AnnualReportDownloader:
             if self.open_annual_reports_tab():
                 self.download_reports()
         finally:
-            # --- MODIFICATION: Call the new organizer method before quitting ---
-            self._unzip_and_organize_reports()
             self.driver.quit()
             logging.info(f"All reports processed for {self.symbol} [OK]")
 
@@ -184,14 +124,13 @@ if __name__ == "__main__":
     csv_file = config["path"]["csv"]
     download_path = config["path"]["downloads"]
     log_path = config["path"]["logs"]
-    # --- MODIFICATION STARTS HERE: Get unzipped path from config ---
-    unzipped_path = config["path"]["unzipped"]
-    # --- MODIFICATION ENDS HERE ---
 
+    # --- FIX STARTS HERE ---
     # Get the directory part of the log file path
     log_dir = os.path.dirname(log_path)
     # Create the log directory if it doesn't already exist
     os.makedirs(log_dir, exist_ok=True)
+    # --- FIX ENDS HERE ---
 
     setup_logging(log_path)
 
@@ -202,8 +141,7 @@ if __name__ == "__main__":
     for ticker in tickers:
         logging.info(f"Processing ticker: {ticker}")
         try:
-            # --- MODIFICATION: Pass unzipped_path to the constructor ---
-            downloader = AnnualReportDownloader(ticker, download_path, unzipped_path)
+            downloader = AnnualReportDownloader(ticker, download_path)
             downloader.run()
         except Exception as e:
-            logging.error(f"A critical error occurred while processing {ticker}: {e}", exc_info=True)
+            logging.error(f"Error while processing {ticker}: {e}")
