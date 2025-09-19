@@ -50,7 +50,7 @@ def create_driver(download_dir: str) -> webdriver.Chrome:
 class AnnualReportDownloader:
     def __init__(self, symbol: str, base_download_dir: str):
         self.symbol = symbol
-        self.download_dir = os.path.join(os.path.abspath(base_download_dir), f"{symbol}/downloads")
+        self.download_dir = os.path.join(os.path.abspath(base_download_dir), f"{symbol}_D")
         os.makedirs(self.download_dir, exist_ok=True)
         self.driver = create_driver(self.download_dir)
         self.wait = WebDriverWait(self.driver, 20)
