@@ -1,8 +1,10 @@
 import os
 import time
+import glob
 import logging
 import yaml
 import pandas as pd
+import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -26,6 +28,7 @@ def setup_logging(log_file):
 # ----------------- Driver Factory -----------------
 def create_driver(download_dir: str) -> webdriver.Chrome:
     options = Options()
+    # Run in headless mode (no browser window)
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
@@ -44,6 +47,21 @@ def create_driver(download_dir: str) -> webdriver.Chrome:
     options.add_experimental_option("prefs", prefs)
 
     return webdriver.Chrome(options=options)
+
+
+# ----------------- Download Wait Helper -----------------
+def wait_for_downloads(download_dir, timeout=120):
+    """
+    Wait until all downloads in download_dir are complete (no .crdownload files).
+    """
+    logging.info("Waiting for downloads to complete...")
+    end_time = time.time() + timeout
+    while time.time() < end_time:
+        files = glob.glob(os.path.join(download_dir, "*"))
+        if files and all(not f.endswith(".crdownload") for f in files):
+            return True
+        time.sleep(1)
+    return False
 
 
 # ----------------- Downloader Class -----------------
@@ -89,19 +107,31 @@ class AnnualReportDownloader:
 
         for idx, link in enumerate(report_links, start=1):
             href = link.get_attribute("href")
-            year_text = link.text.strip() or f"Report_{idx}"
+            link_text = link.text.strip() or f"Report_{idx}"
 
-            year = next((part for part in year_text.split() if part.isdigit() and len(part) == 4), "UNKNOWN")
-            ext = ".pdf" if ".pdf" in href.lower() else ".zip"
-            file_name = f"ANNUAL_{year}{ext}"
-            file_path = os.path.join(self.download_dir, file_name)
-
-            logging.info(f"Triggering download for {year_text} -> {file_name}")
+            logging.info(f"Triggering download for: {link_text}")
             try:
-                self.driver.execute_script("arguments[0].click();", link)
-                time.sleep(5)  # allow download to start
+                # If href is a direct PDF/ZIP link -> use requests
+                if href and href.lower().endswith((".pdf", ".zip")):
+                    file_name = os.path.basename(href.split("?")[0])  # keep original filename
+                    file_path = os.path.join(self.download_dir, file_name)
+
+                    r = requests.get(href, stream=True, headers={"User-Agent": "Mozilla/5.0"})
+                    with open(file_path, "wb") as f:
+                        for chunk in r.iter_content(1024):
+                            f.write(chunk)
+                    logging.info(f"Downloaded directly: {file_name}")
+                else:
+                    # Otherwise click via Selenium
+                    self.driver.execute_script("arguments[0].click();", link)
+                    if wait_for_downloads(self.download_dir, timeout=120):
+                        files = glob.glob(os.path.join(self.download_dir, "*"))
+                        for f in files:
+                            logging.info(f"Downloaded via browser: {os.path.basename(f)}")
+                    else:
+                        logging.warning(f"Download timeout: {link_text}")
             except Exception as e:
-                logging.error(f"Failed to click {year_text}: {e}")
+                logging.error(f"Failed to download {link_text}: {e}")
 
         logging.info(f"Reports downloaded to {self.download_dir}")
 
@@ -117,20 +147,17 @@ class AnnualReportDownloader:
 
 # ----------------- Runner -----------------
 if __name__ == "__main__":
-    
+
     with open("downloader/config/downloader.yaml", "r") as f:
         config = yaml.safe_load(f)
-    
+
     csv_file = config["path"]["csv"]
     download_path = config["path"]["downloads"]
     log_path = config["path"]["logs"]
 
-    # --- FIX STARTS HERE ---
-    # Get the directory part of the log file path
+    # Ensure log directory exists
     log_dir = os.path.dirname(log_path)
-    # Create the log directory if it doesn't already exist
     os.makedirs(log_dir, exist_ok=True)
-    # --- FIX ENDS HERE ---
 
     setup_logging(log_path)
 
