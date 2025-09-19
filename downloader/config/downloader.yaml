@@ -2,4 +2,3 @@ path:
   csv: "../in/tickers.csv"
   downloads : "../reports/downloads"
   logs: "../logs/downloader/downloader.log"
-  unzipped : "../reports/unzipped"

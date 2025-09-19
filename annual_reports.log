@@ -1,0 +1,13 @@
+2025-09-18 22:19:46,075 [INFO] Found 2 tickers in ../in/tickers.csv
+2025-09-18 22:19:46,075 [INFO] Processing ticker: CDSL
+2025-09-18 22:19:47,324 [INFO] Opening https://www.nseindia.com/get-quotes/equity?symbol=CDSL
+2025-09-18 22:19:51,027 [WARNING] Normal click failed, retrying with JS click...
+2025-09-18 22:19:51,042 [INFO] Clicked on Annual Reports tab
+2025-09-18 22:19:56,073 [INFO] Triggering download for Report_1 -> ANNUAL_UNKNOWN.pdf
+2025-09-18 22:20:01,149 [INFO] Triggering download for Report_2 -> ANNUAL_UNKNOWN.pdf
+2025-09-18 22:20:06,204 [INFO] Triggering download for Report_3 -> ANNUAL_UNKNOWN.pdf
+2025-09-18 22:20:11,257 [INFO] Triggering download for Report_4 -> ANNUAL_UNKNOWN.zip
+2025-09-18 22:20:13,125 [WARNING] Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None)': /session/7ba0966010f3dcce08847bfd17aaed6b
+2025-09-18 22:20:17,181 [WARNING] Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x0000019C0B3B47D0>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it')': /session/7ba0966010f3dcce08847bfd17aaed6b
+2025-09-18 22:20:21,225 [WARNING] Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x0000019C0B3B4E10>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it')': /session/7ba0966010f3dcce08847bfd17aaed6b
+2025-09-18 22:20:25,297 [INFO] All reports processed for CDSL [OK]
